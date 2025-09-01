@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mock VR Client</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #log { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; margin-top: 10px; background-color: #f9f9f9; }
+        .log-entry { margin-bottom: 5px; padding: 5px; border-radius: 3px; }
+        .log-info { background-color: #e6f7ff; }
+        .log-success { background-color: #e6ffed; }
+        .log-error { background-color: #ffe6e6; }
+        .log-server { background-color: #fffbe6; }
+        input[type="text"], input[type="number"] { padding: 5px; }
+        button { padding: 5px 10px; margin-left: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Mock VR Client</h1>
+    <div>
+        <label for="patientCode">Patient Code:</label>
+        <input type="text" id="patientCode" placeholder="Enter Patient Code">
+        <button id="connectBtn">Connect</button>
+        <button id="disconnectBtn" disabled>Disconnect</button>
+    </div>
+    <div id="log"></div>
+
+    <hr>
+    <h2>Actions</h2>
+    <div>
+        <label for="diagnosisId">Diagnosis ID:</label>
+        <input type="number" id="diagnosisId" placeholder="Populated on start" readonly>
+        <br><br>
+        <button id="ackStartBtn" disabled>Acknowledge Start</button>
+        <button id="failBtn" disabled>Report Failure</button>
+        <hr style="margin: 20px 0;">
+        <label for="fileInput">CSV File:</label>
+        <input type="file" id="fileInput" accept=".csv">
+        <button id="uploadBtn" disabled>Upload Result</button>
+    </div>
+
+    <script>
+        let websocket;
+        const log = document.getElementById('log');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const patientCodeInput = document.getElementById('patientCode');
+        const diagnosisIdInput = document.getElementById('diagnosisId');
+        const ackStartBtn = document.getElementById('ackStartBtn');
+        const failBtn = document.getElementById('failBtn');
+
+        function addLog(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry log-' + type;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        connectBtn.onclick = () => {
+            const patientCode = patientCodeInput.value;
+            if (!patientCode) {
+                addLog('Please enter a Patient ID.', 'error');
+                return;
+            }
+            // Nginx를 통해 /api/ws/ 경로로 프록시
+            let wsUrl;
+            if (window.location.protocol === 'https:') {
+                wsUrl = `wss://${window.location.host}/api/ws/diagnosis/${patientCode}`;
+            } else {
+                wsUrl = `ws://${window.location.host}/api/ws/diagnosis/${patientCode}`;
+            }
+            console.log(wsUrl);
+            websocket = new WebSocket(wsUrl);
+
+            websocket.onopen = () => {
+                addLog(`Connected with Patient ID: ${patientCode}`, 'success');
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                uploadBtn.disabled = false;
+                ackStartBtn.disabled = false;
+                failBtn.disabled = false;
+            };
+
+            websocket.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                addLog(`Server: ${JSON.stringify(msg)}`, 'server');
+                handleMessage(msg);
+            };
+
+            websocket.onclose = () => {
+                addLog('Disconnected.', 'info');
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                uploadBtn.disabled = true;
+                ackStartBtn.disabled = true;
+                failBtn.disabled = true;
+            };
+
+            websocket.onerror = (error) => {
+                addLog(`WebSocket Error: ${error.message || 'Unknown error'}`, 'error');
+            };
+        };
+
+        disconnectBtn.onclick = () => {
+            if (websocket) {
+                websocket.close();
+            }
+        };
+
+        ackStartBtn.onclick = () => {
+            const diagnosisId = diagnosisIdInput.value;
+            if (!diagnosisId) {
+                addLog('Diagnosis ID is not set. Wait for a start_diagnosis message.', 'error');
+                return;
+            }
+            const message = {
+                action: 'c_diagnosis_started',
+                data: { diagnosis_id: parseInt(diagnosisId) }
+            };
+            websocket.send(JSON.stringify(message));
+            addLog(`Sent start acknowledgement for diagnosis ID: ${diagnosisId}`, 'info');
+        };
+
+        failBtn.onclick = () => {
+            const diagnosisId = diagnosisIdInput.value;
+            if (!diagnosisId) {
+                addLog('Diagnosis ID is not set. Wait for a start_diagnosis message.', 'error');
+                return;
+            }
+            const message = {
+                action: 'c_diagnosis_failed',
+                data: { diagnosis_id: parseInt(diagnosisId) }
+            };
+            websocket.send(JSON.stringify(message));
+            addLog(`Sent failure report for diagnosis ID: ${diagnosisId}`, 'info');
+        };
+
+        uploadBtn.onclick = () => {
+            const diagnosisId = diagnosisIdInput.value;
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (!diagnosisId || !file) {
+                addLog('Diagnosis ID and a CSV file are required to upload.', 'error');
+                return;
+            }
+            
+            if (file.type && file.type !== "text/csv") {
+                addLog('Please select a CSV file.', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const fileContent = event.target.result;
+                const message = {
+                    action: 'c_upload_result',
+                    data: {
+                        diagnosis_id: parseInt(diagnosisId),
+                        file_content: fileContent
+                    }
+                };
+                websocket.send(JSON.stringify(message));
+                addLog(`Sent upload request for diagnosis ID: ${diagnosisId} with file: ${file.name}`, 'info');
+            };
+            reader.readAsText(file);
+        };
+
+        function handleMessage(msg) {
+            if (msg.action === 's_start_diagnosis') {
+                const { diagnosis_id, type, level } = msg.data;
+                addLog(`Diagnosis started! ID: ${diagnosis_id}, Type: ${type}, Level: ${level}`, 'success');
+                // Store diagnosis_id for actions
+                diagnosisIdInput.value = diagnosis_id;
+            } else if (msg.action === 's_stop_diagnosis') {
+                addLog('Diagnosis stopped by server.', 'info');
+                diagnosisIdInput.value = '';
+            } else {
+                addLog(`Unknown action: ${msg.action}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html> 

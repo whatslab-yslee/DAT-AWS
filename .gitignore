@@ -1,0 +1,71 @@
+# 1. 일반 파이썬/PyCharm/VSCode 관련
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+venv/
+.venv/
+build/
+develop-eggs/
+dist/
+eggs/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+.coverage
+.cache
+.pytest_cache/
+
+# PyCharm project files
+.idea/
+
+# VSCode settings
+.vscode/
+
+# 2. 환경 변수 / 민감정보
+.env
+*.env
+*.env.*
+!.env.example
+
+secrets/
+config/secret_*.yaml
+
+# 3. 로그 파일
+*.log
+logs/
+log/
+
+# 4. Docker 관련
+docker-compose.override.yml
+docker-compose.*.yml
+*.swap
+*~ 
+*.swp
+
+# 5. OS 별/기타
+.DS_Store
+Thumbs.db
+
+*.pkl
+*.pth
+test.db
+uv.lock

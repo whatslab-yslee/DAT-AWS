@@ -1,0 +1,16 @@
+{
+  "rules": [
+    {
+      "name": "fastapi-rule.mdc",
+      "patterns": [
+        "/backend/**/*"
+      ]
+    },
+    {
+      "name": "streamlit-rule.mdc",
+      "patterns": [
+        "/frontend/**/*"
+      ]
+    }
+  ]
+}

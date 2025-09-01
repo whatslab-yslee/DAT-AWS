@@ -1,0 +1,57 @@
+version: "3"
+services:
+  app:
+    image: poc:dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:80"
+    depends_on:
+      - db
+      - localstack
+    env_file:
+      - .env
+    volumes:
+      - ./backend/migrations:/app/backend/migrations
+
+  db:
+    env_file:
+      - .env
+    image: postgres:16.7
+    container_name: local-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-mydb}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  localstack:
+    image: localstack/localstack:latest
+    container_name: local-s3-stack
+    ports:
+      - "4566:4566" # LocalStack 기본 포트
+    environment:
+      - SERVICES=s3 # S3 서비스만 활성화
+      - DEFAULT_REGION=ap-northeast-2
+      # 초기화 단계에서 컨테이너 내 디렉토리 삭제하지 않도록 설정
+      - SKIP_INIT_CLEANUP=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      # 데이터 디렉토리 경로 변경
+      - DATA_DIR=/var/lib/localstack
+    volumes:
+      # 마운트 포인트 변경
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
+  localstack_data: # 명명된 볼륨으로 변경

@@ -1,0 +1,18 @@
+section[data-testid="stSidebar"] div.stButton button {
+    background-color: white;
+    width: 100%;   
+}
+footer {
+	
+	visibility: hidden;
+	
+	}
+footer:after {
+	content:'(주)왓츠랩 제작 | Version 0.1.1 beta'; 
+	visibility: visible;
+	display: block;
+	position: relative;
+	background-color: white;
+	padding: 5px;
+	top: 2px;
+}

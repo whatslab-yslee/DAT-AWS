@@ -1,0 +1,8 @@
+/* 아이콘 크기 조정 */
+[data-testid="stIconEmoji"] {
+    font-size: 0.7em !important;
+}
+/* 아이콘과 텍스트 사이 마진 제거 */
+[data-testid="stPageLink-NavLink"] {
+    gap: 0.1em !important;
+}

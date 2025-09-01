@@ -1,0 +1,97 @@
+[project]
+name = "poc"
+version = "1.1.1"
+description = "POC backend and frontend project"
+authors = [{ name = "yeseo" }]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.115.11",
+    "jinja2==3.1.5",
+    "uvicorn[standard]==0.34.0",
+    "python-multipart==0.0.20",
+    "websockets",
+    "alembic==1.15.1",
+    "psycopg2-binary==2.9.10",
+    "sqlalchemy==2.0.38",
+    "boto3==1.37.9",
+    "passlib==1.7.4",
+    "python-jose==3.4.0",
+    "streamlit==1.43.1",
+    "streamlit-js-eval==0.1.7",
+    "httpx==0.28.1",
+    "numpy==2.1.0",
+    "pandas==2.2.3",
+    "plotly==6.0.0",
+    "scikit-learn==1.6.1",
+    "python-dotenv==1.0.1",
+    "loguru==0.7.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "eralchemy2",
+    "ruff"
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 160
+
+# Exclude the following files and directories.
+exclude = [
+  ".git",
+  ".hg",
+  ".mypy_cache",
+  ".tox",
+  ".venv",
+  "_build",
+  "buck-out",
+  "build",
+  "dist",
+  "env",
+  "venv",
+  "migrations",
+  "**/*.ipynb",
+]
+
+[tool.ruff.lint]
+# Never enforce `E501` (line length violations).
+extend-select = ["C901", "E501", "E402"]
+select = ["C", "E", "F", "I", "W"]
+
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402", "F401", "F403", "F811"]
+
+[tool.ruff.lint.isort]
+lines-after-imports = 2
+
+# Setting the order of sections
+section-order = ["standard-library", "third-party", "local-folder"]
+combine-as-imports = true
+force-sort-within-sections = true
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+[tool.uv.workspace]
+members = [
+    "dat",
+]
+
+[tool.setuptools]
+packages = ["backend.app", "frontend.src"]
+package-dir = { "backend.app" = "backend/app", "frontend.src" = "frontend/src" }

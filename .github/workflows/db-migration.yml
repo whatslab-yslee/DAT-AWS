@@ -1,0 +1,97 @@
+name: Database Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      migration_type:
+        description: 'Migration type (upgrade/downgrade)'
+        required: true
+        default: 'upgrade'
+        type: choice
+        options:
+          - upgrade
+          - downgrade
+          # - reset
+      revision:
+        description: 'Revision for downgrade (leave empty for upgrade)'
+        required: false
+        type: string
+
+env:
+  AWS_REGION: ap-northeast-2
+  ECS_CLUSTER: whatslab-dat-ecs # Fargate 클러스터명
+  TASK_DEFINITION_NAME: dat-task # ECS 태스크 정의명
+  ECS_CONTAINER_NAME: dat-container # ECS 태스크 정의에서 컨테이너 이름
+  
+  SUBNETS: subnet-0234d2d0f023527b9
+  SECURITY_GROUPS: sg-06689ae31de922a95
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  ROLE_TO_ASSUME: ${{ secrets.ROLE_TO_ASSUME }}
+
+jobs:
+  migrate:
+    name: Run DB Migration
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run ECS Task (Alembic Migration)
+        id: run-task
+        run: |
+          echo "Running DB migration as a one-off task..."
+          
+          # 마이그레이션 명령어 설정
+          if [ "${{ github.event.inputs.migration_type }}" == "upgrade" ]; then
+            MIGRATION_CMD="alembic upgrade head"
+          elif [ "${{ github.event.inputs.migration_type }}" == "reset" ]; then
+            MIGRATION_CMD="python3 migrations/reset_db.py"
+          else
+            if [ -z "${{ github.event.inputs.revision }}" ]; then
+              echo "Error: Revision is required for downgrade"
+              exit 1
+            fi
+            MIGRATION_CMD="alembic downgrade ${{ github.event.inputs.revision }}"
+          fi
+
+          TASK_ARN=$(aws ecs run-task \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[${{ env.SUBNETS }}],securityGroups=[${{ env.SECURITY_GROUPS }}],assignPublicIp=DISABLED}" \
+            --task-definition ${{ env.TASK_DEFINITION_NAME }} \
+            --overrides '{
+              "containerOverrides": [
+                {
+                  "name": "${{ env.ECS_CONTAINER_NAME }}",
+                  "command": ["sh", "-c", "cd /app/backend && '"$MIGRATION_CMD"'"]
+                }
+              ]
+            }' \
+            --query 'tasks[0].taskArn' \
+            --output text)
+
+          echo "Task ARN: $TASK_ARN"
+
+          # 마이그레이션이 끝날 때까지 대기
+          aws ecs wait tasks-stopped --cluster ${{ env.ECS_CLUSTER }} --tasks "$TASK_ARN"
+
+          # Exit Code 확인
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --tasks "$TASK_ARN" \
+            --query 'tasks[0].containers[0].exitCode' \
+            --output text)
+
+          echo "Migration container exit code: $EXIT_CODE"
+
+          # 실패(0이 아님)면 워크플로우 중단
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            echo "Migration failed"
+            exit 1
+          fi 
