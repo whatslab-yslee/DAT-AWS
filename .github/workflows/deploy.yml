@@ -11,15 +11,15 @@ on:
 
 env:
   AWS_REGION: ap-northeast-2
-  ECR_REPOSITORY: whatslab/dat
+  ECR_REPOSITORY: yslwl/dat
   IMAGE_TAG: latest
-  ECS_CLUSTER: whatslab-dat-ecs # Fargate 클러스터명
-  ECS_SERVICE: dat-service # ECS 서비스명
-  TASK_DEFINITION_NAME: dat-task # ECS 태스크 정의명
-  ECS_CONTAINER_NAME: dat-container # ECS 태스크 정의에서 컨테이너 이름
+  ECS_CLUSTER: my-ecs-01 # Fargate 클러스터명
+  ECS_SERVICE: my-task-service-kjxz6lhn # ECS 서비스명
+  TASK_DEFINITION_NAME: my-task # ECS 태스크 정의명
+  ECS_CONTAINER_NAME: my-container # ECS 태스크 정의에서 컨테이너 이름
 
-  SUBNETS: subnet-0234d2d0f023527b9
-  SECURITY_GROUPS: sg-06689ae31de922a95
+  SUBNETS: subnet-0a6463a061d25f35e
+  SECURITY_GROUPS: 	sg-00578225915bb2833
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   ROLE_TO_ASSUME: ${{ secrets.ROLE_TO_ASSUME }}
 
