@@ -1,0 +1,13 @@
+# AWS Configuration
+aws_region = "ap-northeast-2"
+environment = "prod"
+
+# SSL Certificate (optional)
+# certificate_arn = "arn:aws:acm:ap-northeast-2:123456789012:certificate/12345678-1234-1234-1234-123456789012"
+
+# EC2 Configuration
+instance_type = "t2.micro"
+key_name = "your-key-pair-name"
+
+# Network Configuration
+allowed_cidr_blocks = ["0.0.0.0/0"]  # Restrict this for production

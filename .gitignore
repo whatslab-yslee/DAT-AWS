@@ -65,6 +65,13 @@ docker-compose.*.yml
 .DS_Store
 Thumbs.db
 
+# Terraform
+terraform/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+
 *.pkl
 *.pth
 test.db
